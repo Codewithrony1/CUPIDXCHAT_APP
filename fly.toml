@@ -1,0 +1,43 @@
+# fly.toml — CupidX Socket Server on Fly.io
+#
+# Alternative to Render if you prefer Fly.io (always-on free tier in one region).
+#
+# Deploy:
+#   1. Install flyctl: https://fly.io/docs/hands-on/install-flyctl/
+#   2. From the repo root:
+#        fly launch --config fly.toml --dockerfile socket/Dockerfile
+#   3. Set secrets:
+#        fly secrets set DATABASE_URL="postgresql://..."
+#        fly secrets set JWT_SECRET="your-secret"
+#        fly secrets set NEXT_PUBLIC_CLIENT_URL="https://cupidxchat.in"
+#        fly secrets set ALLOWED_ORIGINS="https://cupidxchat.in,https://www.cupidxchat.in"
+#   4. Deploy:
+#        fly deploy --config fly.toml --dockerfile socket/Dockerfile
+#   5. Get your URL: fly status → copy the hostname → set as NEXT_PUBLIC_SOCKET_URL in Vercel
+
+app = "cupidx-socket-server"
+primary_region = "sin"  # Singapore — change to: sin | nrt | lax | iad | fra | syd
+
+[build]
+  dockerfile = "socket/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3001"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = false   # Keep the socket server always running
+  auto_start_machines = true
+  min_machines_running = 1     # Never scale to zero — sockets need persistence
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "10s"
+
+[[vm]]
+  size = "shared-cpu-1x"   # 256 MB RAM — cheapest tier (~$1.94/mo with free allowance)

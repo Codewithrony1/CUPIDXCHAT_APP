@@ -1,0 +1,11 @@
+{
+  "name": "Cupidx",
+  "description": "Fast, mobile-friendly 1-to-1 direct and random chat web application with automatic ephemeral chat deletion.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

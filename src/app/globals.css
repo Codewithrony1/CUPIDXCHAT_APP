@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+:root {
+  --background: #120019;
+  --foreground: #fff5fa;
+  --font-sans: var(--font-outfit), system-ui, -apple-system, sans-serif;
+}
+
+@theme inline {
+  --font-sans: var(--font-outfit), system-ui, -apple-system, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  background-image: 
+    radial-gradient(circle at 20% 20%, rgba(244, 114, 182, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(225, 29, 72, 0.15) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(192, 38, 211, 0.12) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+
+/* Glassmorphism helpers for Romantic Modern Theme */
+.glass {
+  background: rgba(30, 10, 40, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(244, 114, 182, 0.2);
+}
+
+.glass-romantic {
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.15) 0%, rgba(236, 72, 153, 0.04) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(244, 114, 182, 0.3);
+  box-shadow: 0 12px 40px 0 rgba(236, 72, 153, 0.2);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-romantic:hover {
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.25) 0%, rgba(236, 72, 153, 0.08) 100%);
+  border-color: rgba(244, 114, 182, 0.6);
+  box-shadow: 0 16px 50px 0 rgba(236, 72, 153, 0.35);
+  transform: translateY(-4px);
+}
+
+.glass-input {
+  background: rgba(18, 0, 25, 0.6);
+  border: 1px solid rgba(244, 114, 182, 0.25);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.glass-input:focus {
+  outline: none;
+  border-color: #f472b6;
+  box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.3);
+  background: rgba(18, 0, 25, 0.85);
+}
+
+/* Glowing Neon Text & Effects */
+.glow-pink {
+  box-shadow: 0 0 30px rgba(244, 114, 182, 0.5);
+}
+
+.glow-pink-btn {
+  box-shadow: 0 8px 30px -4px rgba(236, 72, 153, 0.6);
+}
+
+.glow-pink-lg {
+  box-shadow: 0 0 50px rgba(244, 114, 182, 0.4);
+}
+
+.text-glow-pink {
+  text-shadow: 0 0 20px rgba(244, 114, 182, 0.8), 0 0 40px rgba(236, 72, 153, 0.4);
+  transition: all 0.3s ease;
+}
+
+.text-glow-pink:hover {
+  text-shadow: 0 0 30px rgba(244, 114, 182, 1), 0 0 60px rgba(236, 72, 153, 0.7);
+  letter-spacing: 0.01em;
+}
+
+/* Interactive Text Hover Utilities */
+.hover-link-pink {
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.hover-link-pink::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, #ec4899, #f43f5e);
+  transition: width 0.3s ease;
+  border-radius: 99px;
+}
+
+.hover-link-pink:hover::after {
+  width: 100%;
+}
+
+/* Floating Hearts Keyframe Animation */
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(0.8) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.85;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-100vh) scale(1.25) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-float-heart {
+  animation: floatUp linear infinite;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(18, 0, 25, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(244, 114, 182, 0.5);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 72, 153, 0.8);
+}

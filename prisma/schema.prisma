@@ -1,0 +1,541 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "rhel-openssl-1.0.x", "debian-openssl-3.0.x", "windows"]
+}
+
+model User {
+  id              String        @id @default(uuid())
+  clerkUserId     String?       @unique
+  username        String        @unique
+  fullName        String
+  displayName     String?
+  email           String?
+  gender          String        @default("unspecified") // "male", "female", "non-binary", "prefer_not_to_say", "unspecified"
+  dob             DateTime?
+  genderDobLocked Boolean       @default(false) // Admin override lock
+  profileCompleted Boolean      @default(false)
+  profileLocked   Boolean       @default(false)
+  passwordHash    String?       @default("")
+  role            String        @default("USER") // "USER" or "ADMIN"
+  membershipTier  String        @default("FREE") // "FREE" or "VIP"
+  is_vip          Boolean       @default(false)
+  vip_started_at  DateTime?
+  vip_expires_at  DateTime?
+  vipUsername          String?       @unique
+  vipUsernameClaimedAt DateTime?
+  isSuspended     Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  profile           Profile?
+  subscription      Subscription?
+  consent           UserConsent?
+  payments          Payment[]
+  manualUpiPayments ManualUpiPayment[]
+  vipRequests       VipRequest[]
+  paymentRequests   PaymentRequest[]
+  notifications     Notification[]
+  adminLogs         AdminLog[]
+
+  sentMessages     Message[]     @relation("SentMessages")
+
+  chatSessionsA    ChatSession[] @relation("ChatSessionUserA")
+  chatSessionsB    ChatSession[] @relation("ChatSessionUserB")
+
+  sentFriendRequests     FriendRequest[] @relation("SentFriendRequests")
+  receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
+
+  friendships1 Friendship[] @relation("FriendshipUser1")
+  friendships2 Friendship[] @relation("FriendshipUser2")
+
+  conversations1 Conversation[] @relation("ConversationUser1")
+  conversations2 Conversation[] @relation("ConversationUser2")
+
+  privateMessagesSent PrivateMessage[] @relation("PrivateMessageSender")
+
+  callsMade     CallSession[] @relation("CallsMade")
+  callsReceived CallSession[] @relation("CallsReceived")
+
+  blockedUsers Block[] @relation("Blocker")
+  blockedBy    Block[] @relation("Blocked")
+
+  bansAuthor   UserBan[] @relation("BanAuthor")
+  bannedUsers  UserBan[] @relation("BannedSubject")
+
+  sentReports  Report[] @relation("Reporter")
+  reportedBy   Report[] @relation("Reported")
+
+  @@index([email])
+  @@index([role])
+}
+
+model Profile {
+  id                     String    @id @default(uuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio                    String    @default("")
+  showBio                Boolean   @default(true)
+  age                    Int       @default(18)
+  gender                 String    @default("unspecified") // "male", "female", "non-binary", "prefer_not_to_say", "unspecified"
+  dob                    DateTime?
+  ageGenderConfirmed     Boolean   @default(false)
+  profileCompleted       Boolean   @default(false)
+  profileLocked          Boolean   @default(false)
+  ageGenderChangesCount  Int       @default(0)
+  showGender             Boolean   @default(true)
+  preferredGender        String    @default("auto") // "auto", "male", "female", "any"
+  personalityPreferences String    @default("") // Comma-separated personality tags (e.g. "Talkative,Funny,Friendly")
+  mood                   String    @default("") // Current mood emoji + title
+  showMood               Boolean   @default(true)
+  moodExpiresAt          DateTime?
+  language               String    @default("english") // "english", "hindi", "spanish", "french", "any"
+  saveChatHistory        Boolean   @default(false)
+  interests              String    @default("") // Comma-separated interests
+  avatarType             String    @default("EMOJI") // "EMOJI" or "IMAGE"
+  avatarEmoji            String    @default("😊") // Default avatar emoji
+  avatarUrl              String?   // Custom image URL for VIP
+  isOnline               Boolean   @default(false)
+  lastSeen               DateTime  @default(now())
+  themePreference        String    @default("system") // "light", "dark", "system"
+  randomChatIntroSeen    Boolean   @default(false)
+  nameChangesCount       Int       @default(0)
+  nameChangesDate        DateTime?
+  aiGenderEstimate       String    @default("unknown") // "male", "female", "non-binary", "unknown"
+  aiGenderConfidence     Float?
+  aiGenderEstimatedAt    DateTime?
+  aiGenderConsent        Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+model MatchmakingQueue {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  socketId        String?
+  gender          String   @default("unspecified")
+  preferredGender String   @default("auto")
+  language        String   @default("english")
+  countryCode     String?
+  countryName     String?
+  countryFlag     String?
+  status          String   @default("WAITING") // WAITING, MATCHED, CANCELLED
+  chatSessionId   String?
+  partnerUserId   String?
+  joinedAt        DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status, gender, preferredGender])
+  @@index([status, updatedAt])
+  @@index([userId, status])
+}
+
+model ChatSession {
+  id        String    @id @default(uuid())
+  userAId   String
+  userBId   String
+  status    String    @default("ACTIVE") // ACTIVE, ENDED
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  userA User @relation("ChatSessionUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("ChatSessionUserB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  messages Message[]
+
+  @@index([userAId, status])
+  @@index([userBId, status])
+  @@index([status, startedAt])
+}
+
+model Message {
+  id              String   @id @default(uuid())
+  clientMessageId String?
+  chatSessionId   String
+  senderId        String
+  content         String
+  imageUrl        String?
+  status          String   @default("SENT") // SENDING, SENT, FAILED
+  deliveredAt     DateTime?
+  createdAt       DateTime @default(now())
+
+  chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  sender      User        @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([chatSessionId, createdAt])
+  // DB-001: clientMessageId uniqueness prevents duplicate inserts from concurrent
+  // retries. The index-only approach (@@index) was insufficient since two concurrent
+  // requests with the same clientMessageId could both pass the findFirst check before
+  // either completes the write. A unique constraint enforces this at the DB level.
+  @@unique([clientMessageId])
+}
+
+model AntiRematchExclusion {
+  id        String   @id @default(uuid())
+  pairHash  String   @unique
+  user1Id   String
+  user2Id   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@index([user1Id, user2Id])
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+}
+
+model UserBan {
+  id             String   @id @default(uuid())
+  bannedByUserId String
+  bannedUserId   String
+  createdAt      DateTime @default(now())
+
+  bannedBy   User @relation("BanAuthor", fields: [bannedByUserId], references: [id], onDelete: Cascade)
+  bannedUser User @relation("BannedSubject", fields: [bannedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([bannedByUserId, bannedUserId])
+  @@index([bannedByUserId])
+  @@index([bannedUserId])
+}
+
+model Report {
+  id                String   @id @default(uuid())
+  reporterId        String
+  reportedUserId    String
+  reason            String
+  snapshotMessages  String?  // JSON stringified snapshot of conversation messages
+  status            String   @default("PENDING") // PENDING, RESOLVED
+  createdAt         DateTime @default(now())
+
+  reporter User @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported User @relation("Reported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+}
+
+model ModerationEvent {
+  id                 String   @id @default(uuid())
+  userId             String
+  matchId            String?
+  messageId          String?
+  category           String
+  severity           String
+  risk               String
+  confidence         Float
+  recommendedAction  String
+  action             String
+  reason             String?
+  createdAt          DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([matchId, createdAt])
+  @@index([risk, createdAt])
+  @@index([category, createdAt])
+}
+
+model Payment {
+  id                String   @id @default(uuid())
+  userId            String
+  razorpayOrderId   String   @unique
+  razorpayPaymentId String?  @unique
+  amount            Int
+  currency          String   @default("INR")
+  plan              String   @default("VIP")
+  status            String   @default("PENDING") // PENDING, CREATED, SUCCESS, FAILED, CANCELLED, REFUNDED, CAPTURED
+  qrImageUrl        String?
+  qrCodeId          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  plan               String    @default("VIP")
+  isActive           Boolean   @default(false)
+  subscriptionStatus String    @default("INACTIVE") // INACTIVE, ACTIVE, EXPIRED, CANCELLED
+  subscriptionId     String?
+  razorpayOrderId    String?
+  razorpayPaymentId  String?
+  startDate          DateTime  @default(now())
+  endDate            DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WebhookEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique
+  eventType   String
+  processedAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   @default("SYSTEM") // MESSAGE, SYSTEM, ADMIN, PAYMENT
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ManualUpiPayment {
+  id               String    @id @default(uuid())
+  paymentId        String    @unique @default(uuid())
+  userId           String
+  merchantName     String    @default("Lexino Enterprises")
+  amount           Float     @default(99.0)
+  planName         String    @default("VIP Membership")
+  utrNumber        String?   @unique
+  screenshotUrl    String?
+  status           String    @default("UNDER_REVIEW") // PENDING_PAYMENT, UNDER_REVIEW, PAID, REJECTED
+  rejectionReason  String?
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model VipRequest {
+  id              String    @id @default(uuid())
+  userId          String
+  method          String    // "qr" | "btc"
+  proofUrl        String?   // Screenshot URL for QR
+  txHash          String?   // Bitcoin transaction hash
+  utrNumber       String?   @unique // UPI reference / UTR
+  amount          Float     @default(99.0)
+  status          String    @default("pending") // "pending" | "approved" | "rejected"
+  rejectionReason String?
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model AdminLog {
+  id               String   @id @default(uuid())
+  adminUserId      String
+  adminClerkId     String?
+  action           String   // e.g. "APPROVE_PAYMENT", "REJECT_PAYMENT", "ACTIVATE_SUBSCRIPTION", "DEACTIVATE_SUBSCRIPTION", "UPDATE_QR"
+  targetUserId String?
+  entityType   String?  // "PAYMENT", "SUBSCRIPTION", "USER", "SETTING"
+  entityId     String?
+  details      String?
+  metadata     String?
+  createdAt    DateTime @default(now())
+
+  admin User @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+}
+
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model PaymentRequest {
+  id              String    @id @default(uuid())
+  requestId       String    @unique @default(uuid())
+  userId          String
+  clerkUserId     String?
+  userEmail       String?
+  userFullName    String?
+  username        String
+  plan            String    @default("monthly") // "monthly" | "yearly" | "pro"
+  planId          String    @default("pro_monthly")
+  region          String    @default("india") // "india" | "international"
+  amount          Float     @default(29.0)
+  currency        String    @default("INR") // "INR" | "USD"
+  paymentId       String?   @unique // UTR / Payment ID / Transaction ID
+  screenshotUrl   String?   // Secure screenshot storage path
+  screenshotKey   String?   // Private storage key
+  status          String    @default("UNDER_REVIEW") // "PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"
+  rejectionReason String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  reviewedAt      DateTime?
+  reviewedBy      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+  @@index([clerkUserId])
+}
+
+model FriendRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, CANCELLED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sender   User @relation("SentFriendRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([senderId, status])
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  user1Id   String   // canonical u1 < u2
+  user2Id   String
+  createdAt DateTime @default(now())
+
+  user1 User @relation("FriendshipUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2 User @relation("FriendshipUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+}
+
+model Conversation {
+  id            String   @id @default(uuid())
+  user1Id       String   // canonical u1 < u2
+  user2Id       String
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user1 User @relation("ConversationUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2 User @relation("ConversationUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  messages PrivateMessage[]
+  calls    CallSession[]
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+  @@index([lastMessageAt])
+  // PERF-001: Composite indexes allow the DB to satisfy the (user1Id OR user2Id)
+  // query ordered by lastMessageAt without a full table scan + in-memory sort.
+  @@index([user1Id, lastMessageAt(sort: Desc)])
+  @@index([user2Id, lastMessageAt(sort: Desc)])
+}
+
+model PrivateMessage {
+  id              String   @id @default(uuid())
+  conversationId  String
+  senderId        String
+  type            String   @default("TEXT") // TEXT, IMAGE, SYSTEM, CALL_EVENT
+  content         String   @default("")
+  imageUrl        String?
+  status          String   @default("SENT") // SENT, READ, FAILED
+  clientMessageId String?
+  createdAt       DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("PrivateMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  // DB-001: Same uniqueness guarantee as Message.clientMessageId above.
+  @@unique([clientMessageId])
+}
+
+model CallSession {
+  id             String    @id @default(uuid())
+  conversationId String
+  callerId       String
+  receiverId     String
+  callType       String    @default("VOICE") // VOICE or VIDEO
+  status         String    @default("CALLING") // CALLING, RINGING, ACCEPTED, CONNECTING, CONNECTED, DECLINED, MISSED, ENDED, FAILED
+  startedAt      DateTime  @default(now())
+  endedAt        DateTime?
+  durationSec    Int       @default(0)
+  offerSdp       String?
+  answerSdp      String?
+  iceCandidates  String?   // JSON stringified array of candidates
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  caller       User         @relation("CallsMade", fields: [callerId], references: [id], onDelete: Cascade)
+  receiver     User         @relation("CallsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([receiverId, status])
+  @@index([callerId, status])
+  @@index([conversationId])
+}
+
+model UserConsent {
+  id                               String    @id @default(uuid())
+  userId                           String    @unique
+  user                             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  termsAccepted                    Boolean   @default(false)
+  termsAcceptedAt                  DateTime?
+  privacyAcknowledged              Boolean   @default(false)
+  privacyAcknowledgedAt            DateTime?
+  ageConfirmed                     Boolean   @default(false)
+  ageConfirmedAt                   DateTime?
+  randomChatAcknowledged           Boolean   @default(false)
+  randomChatAcknowledgedAt         DateTime?
+  locationProcessingAcknowledged   Boolean   @default(false)
+  locationProcessingAcknowledgedAt DateTime?
+  marketingConsent                 Boolean   @default(false)
+  marketingConsentUpdatedAt        DateTime?
+  termsVersion                     String    @default("2026-09-01")
+  privacyVersion                   String    @default("2026-09-01")
+  consentTimestamp                 DateTime  @default(now())
+  createdAt                        DateTime  @default(now())
+  updatedAt                        DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model DeletedAccountLock {
+  id        String   @id @default(uuid())
+  emailHash String   @unique
+  expiresAt DateTime
+  reason    String   @default("ACCOUNT_DELETION_COOLDOWN")
+  createdAt DateTime @default(now())
+
+  @@index([emailHash])
+  @@index([expiresAt])
+}
+
+model FinancialAuditRecord {
+  id              String   @id @default(uuid())
+  orderId         String?  // UTR / Payment ID / Order reference
+  amount          Float
+  currency        String   @default("INR")
+  plan            String
+  status          String
+  paymentMethod   String   @default("MANUAL_UPI")
+  transactionDate DateTime
+  createdAt       DateTime @default(now())
+
+  @@index([orderId])
+}

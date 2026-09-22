@@ -1,0 +1,36 @@
+# Docker build exclusions for CupidX socket server
+# (Build context is the repo root)
+
+# Next.js artifacts
+.next/
+out/
+
+# Node modules (installed fresh inside container)
+node_modules/
+socket/node_modules/
+
+# Dev database — socket server uses PostgreSQL in production
+prisma/dev.db
+prisma/dev.db-shm
+prisma/dev.db-wal
+uploads/
+
+# Environment secrets — injected at runtime
+.env
+.env.local
+.env.production.local
+
+# Git history
+.git/
+.gitignore
+
+# Dev tooling
+.agents/
+.serena/
+scratch/
+Portfolio-Website/
+notessaver.github.io/
+
+# TypeScript cache
+tsconfig.tsbuildinfo
+*.tsbuildinfo

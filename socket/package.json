@@ -1,0 +1,25 @@
+{
+  "name": "cupidx-socket-server",
+  "version": "1.0.0",
+  "description": "CupidX Realtime Socket.IO Server — runs on a persistent host (Render / Fly.io)",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "better-sqlite3": "^12.11.1",
+    "dotenv": "^16.4.5",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.22.0",
+    "prisma": "^7.8.0",
+    "socket.io": "^4.8.3"
+  }
+}

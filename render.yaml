@@ -1,0 +1,57 @@
+# render.yaml — CupidX Infrastructure as Code
+#
+# Defines the Socket.IO server as a Render Web Service.
+# The Next.js app is deployed on Vercel separately.
+#
+# Deploy:
+#   1. Push this file to GitHub
+#   2. In Render dashboard: New → Blueprint → connect this repo
+#   3. Render will create the socket-server service automatically
+#   4. Set the required environment variables (marked with sync: false)
+#   5. Copy the service URL (https://cupidx-socket.onrender.com) to Vercel as
+#      NEXT_PUBLIC_SOCKET_URL
+#
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # ── CupidX Socket.IO Realtime Server ────────────────────────────────────────
+  - type: web
+    name: cupidx-socket-server
+    runtime: docker
+    # Render uses repo root as build context — matches the Dockerfile COPY paths
+    dockerfilePath: ./socket/Dockerfile
+    region: singapore  # Choose: oregon | frankfurt | singapore | ohio
+    plan: free         # Upgrade to "starter" ($7/mo) to avoid 15-min sleep on free tier
+
+    # Render injects PORT automatically; our server reads process.env.PORT
+    # No need to specify port here — Render detects it from EXPOSE in Dockerfile
+
+    healthCheckPath: /health
+
+    envVars:
+      # ── Required ────────────────────────────────────────────────────────────
+      - key: NODE_ENV
+        value: production
+
+      # PostgreSQL connection string — use the SAME database as your Vercel app
+      # Get this from: Vercel Dashboard → Storage → your Postgres DB → .env.local
+      - key: DATABASE_URL
+        sync: false   # Set manually in Render dashboard (never commit secrets)
+
+      # Must match the JWT_SECRET used in your Vercel Next.js deployment
+      - key: JWT_SECRET
+        sync: false
+
+      # Your Vercel app URL (for CORS) — e.g. https://cupidxchat.in
+      - key: NEXT_PUBLIC_CLIENT_URL
+        sync: false
+
+      # Additional allowed origins (comma-separated) for CORS
+      # e.g. https://cupidxchat.in,https://www.cupidxchat.in,https://your-app.vercel.app
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+      # ── Optional ────────────────────────────────────────────────────────────
+      # Auto-suspend users who send CRITICAL-risk content (set to "true" to enable)
+      - key: CUPIDX_AUTO_SUSPEND_CRITICAL
+        value: "false"
